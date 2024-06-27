@@ -3,9 +3,14 @@
 import OpenAI from "openai";
 import { HttpsProxyAgent } from "https-proxy-agent";
 import { ThirdwebStorage } from "@thirdweb-dev/storage";
-const openai = new OpenAI({
-  httpAgent: new HttpsProxyAgent(process.env.https_proxy),
-});
+
+let options = undefined;
+if (process.env.https_proxy) {
+  options = {
+    httpAgent: new HttpsProxyAgent(process.env.https_proxy),
+  };
+}
+const openai = new OpenAI(options);
 
 const storage = new ThirdwebStorage({
   secretKey: process.env.THIRDWEB_SECRET_KEY,
