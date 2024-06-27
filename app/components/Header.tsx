@@ -35,7 +35,7 @@ export const nftContract = getContract({
   address: process.env.NEXT_PUBLIC_BASIC_NFT_CONTRACT_ADDR,
 });
 
-export function Header() {
+export default function Header() {
   const wallets = [
     createWallet("io.metamask"),
     createWallet("com.coinbase.wallet"),
