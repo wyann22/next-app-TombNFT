@@ -40,6 +40,11 @@ export async function uploadNftToStorage(nft) {
 }
 
 export async function getNftFromStorage(uri) {
-  const data = await storage.downloadJSON(uri);
+  let data = "";
+  try {
+    data = await storage.downloadJSON(uri);
+  } catch (error) {
+    console.error(error);
+  }
   return data;
 }
