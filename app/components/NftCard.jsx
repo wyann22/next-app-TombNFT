@@ -16,6 +16,7 @@ import {
 } from "thirdweb";
 import NftSkeleton from "./Skeleton";
 import Modal from "./Modal";
+import { useQueryClient, useMutation } from "@tanstack/react-query";
 // import { useRouter } from "next/navigation";
 // import { revalidatePath } from "next/cache";
 function ipfsUriToUrl(ipfsUri) {
@@ -27,7 +28,11 @@ export default function NftListedCard({ tokenId, owner, price }) {
   console.log(activeAccount);
   console.log(owner);
   // read the tokenURI from the contract
-  const { data: tokenURI, isLoading } = useReadContract({
+  const {
+    data: tokenURI,
+    status: fetchTokenUriStatus,
+    error: fetchTokenUriError,
+  } = useReadContract({
     contract: nftContract,
     method: "function tokenURI(uint256 tokenId) returns (string)",
     params: [BigInt(tokenId)],
@@ -35,17 +40,6 @@ export default function NftListedCard({ tokenId, owner, price }) {
 
   // fetch tokenURL from URI
   const [tokenJson, setTokenJson] = useState(null);
-  // useEffect(() => {
-  //   const fetchTokenUrl = async () => {
-  //     if (tokenURI) {
-  //       const response = await fetch(ipfsUriToUrl(tokenURI));
-  //       const data = await response.json();
-  //       setTokenJson(data);
-  //     }
-  //   };
-  //   fetchTokenUrl();
-  // }, [tokenURI]);
-  // console.log(tokenJson);
   useEffect(() => {
     const fetchImage = async () => {
       if (tokenURI) {
@@ -57,8 +51,13 @@ export default function NftListedCard({ tokenId, owner, price }) {
 
   // click to buy event
   const [bought, setBought] = useState(false);
-  const { mutate: sendAndConfirmTx, data: transactionReceipt } =
-    useSendAndConfirmTransaction();
+  const {
+    mutate: sendAndConfirmTx,
+    data: transactionReceipt,
+    isPending,
+    isError,
+    isSuccess,
+  } = useSendAndConfirmTransaction();
   const buyNft = async () => {
     const transaction = prepareContractCall({
       contract: marketContract,
@@ -70,14 +69,12 @@ export default function NftListedCard({ tokenId, owner, price }) {
     sendAndConfirmTx(transaction);
   };
 
-  if (isLoading || !tokenJson) {
+  if (fetchTokenUriStatus === "pending" || !tokenJson) {
     return <NftSkeleton />;
   }
   console.log("bought:", bought);
   return (
-    (bought &&
-      transactionReceipt &&
-      transactionReceipt.status == "success") || (
+    isSuccess || (
       <div className="card bg-base-100 shadow-xl">
         <figure>
           <JsxParser jsx={tokenJson["svg"]} />
@@ -88,7 +85,7 @@ export default function NftListedCard({ tokenId, owner, price }) {
             <div className="card-title flex ">{toEther(BigInt(price))} ETH</div>
             {activeAccount &&
             activeAccount.address.toLowerCase() !== owner.toLowerCase() ? (
-              bought ? (
+              isPending ? (
                 <span className="loading loading-spinner loading-lg"></span>
               ) : (
                 <button
@@ -116,9 +113,13 @@ export default function NftListedCard({ tokenId, owner, price }) {
 
 export function NftCollectionCard({ tokenId, owner, price, listed }) {
   const activeAccount = useActiveAccount();
-  console.log(activeAccount);
+
   // read the tokenURI from the contract
-  const { data: tokenURI, isLoading } = useReadContract({
+  const {
+    data: tokenURI,
+    status: fetchTokenUriStatus,
+    error: fetchTokenUriError,
+  } = useReadContract({
     contract: nftContract,
     method: "function tokenURI(uint256 tokenId) returns (string)",
     params: [BigInt(tokenId)],
@@ -138,14 +139,11 @@ export function NftCollectionCard({ tokenId, owner, price, listed }) {
   }, [tokenURI]);
   console.log(tokenJson);
 
-  // click to sell event
-  //const [listing, setListing] = useState(false);
-  const [_listed, setListed] = useState(listed ? "listed" : "unlisted");
-  const [_price, setPrice] = useState(toEther(BigInt(price)));
-  const [soldPrice, setSoldPrice] = useState("0");
+  // click to sell event status
+  const [soldPrice, setSoldPrice] = useState(toEther(BigInt(price)));
   // list nft for sale
-  const sellNft = async () => {
-    setListed("listing");
+
+  const sellNftFunc = async () => {
     const approved_trans = prepareContractCall({
       contract: nftContract,
       method: "function approve(address to, uint256 tokenId)",
@@ -157,60 +155,60 @@ export function NftCollectionCard({ tokenId, owner, price, listed }) {
         "function listNft(address _nftAddress, uint256 _tokenId, uint256 _price)",
       params: [nftContract.address, tokenId, toWei(soldPrice)],
     });
-
-    const approve_rec = await sendAndConfirmTransaction({
-      account: activeAccount,
-      transaction: approved_trans,
-    });
-
-    if (approve_rec.status == "success") {
-      try {
-        const receipt = await sendAndConfirmTransaction({
+    try {
+      const approve_rec = await sendAndConfirmTransaction({
+        account: activeAccount,
+        transaction: approved_trans,
+      });
+      if (approve_rec.status == "success") {
+        await sendAndConfirmTransaction({
           account: activeAccount,
           transaction: list_trans,
         });
-        if (receipt.status == "success") {
-          setListed("listed");
-          setPrice(soldPrice);
-        } else {
-          console.error("transaction reverted");
-        }
-      } catch (e) {
-        console.log(nftContract.address, tokenId, toWei(soldPrice));
-        console.error("sellNft trans error:", e);
+        setIsListed(true);
+      } else {
+        throw new Error("transaction falied" + approve_rec.status);
       }
+    } catch (error) {
+      throw error;
     }
   };
+  const {
+    mutate: sellNftMutation,
+    status: sellNftStatus,
+    error,
+  } = useMutation({
+    mutationFn: sellNftFunc,
+  });
+  console.log(sellNftStatus);
+  console.log(error);
 
-  // cancel list
-  const [cancaling, setCanceling] = useState(false);
-  const [canceled, setCanceled] = useState(false);
-  const cancelListing = async () => {
-    setCanceling(true);
+  const cancelListNftFunc = async () => {
     const cancel_trans = prepareContractCall({
       contract: marketContract,
       method: "function cancelListNft(address _nftAddress, uint256 _tokenId)",
       params: [nftContract.address, tokenId],
     });
-    const cancel_rec = await sendAndConfirmTransaction({
-      account: activeAccount,
-      transaction: cancel_trans,
-    });
-    if (cancel_rec.status == "success") {
-      setCanceling(false);
-      setCanceled(true);
-      setListed("unlisted");
-    } else {
-      console.error("transaction reverted");
+    try {
+      await sendAndConfirmTransaction({
+        account: activeAccount,
+        transaction: cancel_trans,
+      });
+      setIsListed(false);
+    } catch (error) {
+      throw error;
     }
   };
-  const isListing = _listed == "listing";
-  const isListed = _listed == "listed";
-  console.log("tokenid:", tokenId, _listed, listed);
-
-  if (isLoading || !tokenJson) {
+  const { mutate: cancelListNftMutation, status: cancelListNftStatus } =
+    useMutation({ mutationFn: cancelListNftFunc });
+  // cancel list
+  const [isListed, setIsListed] = useState(listed);
+  const isListing = sellNftStatus == "pending";
+  const isCanceling = cancelListNftStatus == "pending";
+  if (fetchTokenUriStatus === "pending" || !tokenJson) {
     return <NftSkeleton />;
   }
+
   const listModalId = "price_modal" + tokenId;
   if (isListing) {
     const modal = document.getElementById(listModalId);
@@ -232,7 +230,7 @@ export function NftCollectionCard({ tokenId, owner, price, listed }) {
           <div className="flex flex-row justify-between items-center">
             <div className="flex flex-row justify-start">
               <p className="prose pr-1">Price:</p>
-              <div className="card-title flex">{_price} ETH</div>
+              <div className="card-title flex">{soldPrice} ETH</div>
             </div>
             <div className="badge badge-neutral badge-sm rounded-sm"> Sale</div>
           </div>
@@ -241,12 +239,12 @@ export function NftCollectionCard({ tokenId, owner, price, listed }) {
         <div className="card-actions flex justify-between items-center ">
           <div className="flex justify-end w-full">
             {isListed ? (
-              cancaling ? (
+              isCanceling ? (
                 <span className="loading loading-spinner loading-lg"></span>
               ) : (
                 <button
                   className="btn btn-outline btn-small btn-wide rounded-sm btn-small btn-ghost hover:bg-black"
-                  onClick={cancelListing}
+                  onClick={cancelListNftMutation}
                 >
                   CANCEL
                 </button>
@@ -279,7 +277,7 @@ export function NftCollectionCard({ tokenId, owner, price, listed }) {
               <div className="modal-action">
                 <button
                   className="btn btn-outline prose-invert btn-ghost hover:bg-black"
-                  onClick={sellNft}
+                  onClick={sellNftMutation}
                 >
                   SUBMIT
                 </button>

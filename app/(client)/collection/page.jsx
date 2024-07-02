@@ -11,9 +11,11 @@ import {
 } from "thirdweb/react";
 import { useEffect } from "react";
 import Alert from "@/app/components/Alert";
+import { useQueryClient } from "@tanstack/react-query";
 export default function Collection() {
   const activeAccount = useActiveAccount();
-
+  const queryClient = useQueryClient();
+  console.log(queryClient);
   const { loading, error, data, refetch } = useQuery(GET_YOUR_NFTS, {
     variables: {
       owner: activeAccount ? activeAccount.address : "",

@@ -1,5 +1,5 @@
 "use client";
-import { ConnectButton } from "thirdweb/react";
+import { ConnectButton, lightTheme } from "thirdweb/react";
 import Link from "next/link";
 import Image from "next/image";
 import { createWallet, inAppWallet } from "thirdweb/wallets";
@@ -39,7 +39,6 @@ export default function Header() {
   const wallets = [
     createWallet("io.metamask"),
     createWallet("com.coinbase.wallet"),
-    createWallet("me.rainbow"),
   ];
   //client id 19384c95c09239d3ea2a87a48b6bdcc5
   //
@@ -123,8 +122,26 @@ export default function Header() {
         </ul>
       </div>
 
-      <div className="navbar-end lg:flex">
-        <ConnectButton client={client} wallets={wallets} />
+      <div className="navbar-end lg:flex btn-sm">
+        <ConnectButton
+          client={client}
+          wallets={wallets}
+          theme={lightTheme({
+            colors: {
+              primaryButtonBg: "#fdfcfd",
+              primaryButtonText: "#1a1523",
+            },
+          })}
+          connectButton={{
+            style: {
+              fontSize: "1rem",
+              padding: "0.6rem",
+              border: "1px solid #e4e2e4",
+              borderRadius: "0.4rem",
+            },
+          }}
+          connectModal={{ size: "compact" }}
+        />
       </div>
     </div>
   );

@@ -4,7 +4,7 @@ import Header from "./components/Header";
 import Link from "next/link";
 export default function Home() {
   return (
-    <div className="relative flex min-h-screen  h- flex-col">
+    <div className="relative flex min-h-screen  flex-col">
       {/* <Image
         src="/logo-no-background.svg"
         alt="Hero Image"
