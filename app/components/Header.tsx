@@ -1,13 +1,9 @@
 "use client";
 import { ConnectButton, lightTheme } from "thirdweb/react";
 import Link from "next/link";
-import Image from "next/image";
 import { createWallet, inAppWallet } from "thirdweb/wallets";
 import { createThirdwebClient, getContract } from "thirdweb";
-import { useState } from "react";
-import { size } from "viem";
 import { sepolia } from "thirdweb/chains";
-import { sep } from "path";
 const client = createThirdwebClient({
   clientId: "19384c95c09239d3ea2a87a48b6bdcc5",
 });

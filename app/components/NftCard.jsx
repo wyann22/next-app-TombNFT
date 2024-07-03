@@ -50,7 +50,6 @@ export default function NftListedCard({ tokenId, owner, price }) {
   }, [tokenURI]);
 
   // click to buy event
-  const [bought, setBought] = useState(false);
   const {
     mutate: sendAndConfirmTx,
     data: transactionReceipt,
@@ -65,14 +64,12 @@ export default function NftListedCard({ tokenId, owner, price }) {
       params: [nftContract.address, tokenId],
       value: BigInt(price),
     });
-    setBought(true);
     sendAndConfirmTx(transaction);
   };
 
   if (fetchTokenUriStatus === "pending" || !tokenJson) {
     return <NftSkeleton />;
   }
-  console.log("bought:", bought);
   return (
     isSuccess || (
       <div className="card bg-base-100 shadow-xl">
