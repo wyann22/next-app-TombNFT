@@ -19,7 +19,7 @@ export default function Home() {
           backgroundPosition: "-10px",
         }}
       >
-        <div className="hero-content max-w-md mb-80">
+        <div className="hero-content max-w-md">
           <Link
             href="/market"
             className="btn btn-outline text-white btn-small btn-wide rounded-md btn-md text-lg btn-ghost hover:bg-white hover:text-black bg-zinc-900"
